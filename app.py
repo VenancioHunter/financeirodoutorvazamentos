@@ -5,6 +5,7 @@ from operator import itemgetter
 from collections import defaultdict
 from datetime import datetime
 from core.lancamento.class_financeiro import Financeiro
+from core.tecnico.class_tecnico import Tecnico
 app = Flask(__name__)
 app.secret_key = 'secret'
 
@@ -384,6 +385,94 @@ def delete_transaction_programada(id):
     except Exception as e:
         print(f"Erro ao deletar transação: {e}")
         return jsonify({'error': 'Erro ao cancelar a transação'}), 500
+    
+@app.route('/transacao_pendente', methods=['GET', 'POST'])
+@check_roles(['admin'])
+def transacao_pendente():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    
+    pendentes = {}
+    data = db.child("financeiro").child("transactions_pendentes").get().val() or {}
+
+    for ano, meses in data.items():
+        for mes, dias in meses.items():
+            for dia, transacoes in dias.items():
+                for pendente_id, pendente in transacoes.items():
+                    pendentes[pendente_id] = {
+                        **pendente,
+                        "ano": ano,
+                        "mes": mes,
+                        "dia": dia,
+                        "id": pendente_id
+                    }
+    return render_template('transacao_pendente.html', pendentes=pendentes)
+
+
+@app.route('/post_transacao_pendente', methods=['POST', 'GET'])
+def post_transacao_pendente():
+
+    dados = request.get_json()
+    total_empresa = dados.get("total_empresa")
+    itens = dados.get("itens", [])
+    
+    user = session['name']
+    id_origem = itens[0]['tecnico_id']
+    
+    origem = itens[0]['tecnico_nome']
+    
+    type = "c"
+    date = itens[0]['date_payment']
+    amount = "{:.2f}".format(total_empresa, 2)
+    
+    category = "Serviço"
+    #especie_method = request.form.get('especie').title()
+    especie = f'Remessa PIX'
+    destinatario = "Central Vazamentos"
+    
+    lista_os = [item['numero_os'] for item in itens]
+    lista_numeros_os = ", ".join(lista_os)
+    #taxa = request.form.get('taxa')
+    description = f'Pagamento referente às OSs: {lista_numeros_os}.'
+    
+    Financeiro.post_transaction_credito_tecnico(date=date, type=type, amount=amount, category=category, description=description, especie=especie, destinatario=destinatario, user=user, origem=origem, id_origem=id_origem)
+
+    id_transaction = itens[0]['id_transaction']
+    try:
+        date = datetime.strptime(date, '%Y-%m-%d')
+    except ValueError:
+            return "Formato de data inválido."
+            
+    year = str(date.year)
+    month = f"{date.month:02d}"
+    day = f"{date.day:02d}"
+
+     
+    for item in itens:
+        get_service_pedente = db.child("financeiro").child("transactions_pendentes").child(year).child(month).child(day).child(item['id_transaction']).get().val()
+        db.child("financeiro").child("transactions_confirmadas").child(year).child(month).child(day).push(get_service_pedente)
+        db.child("financeiro").child("transactions_pendentes").child(year).child(month).child(day).child(item['id_transaction']).remove()
+
+
+    '''
+    if taxa != "0.00":
+
+        porcentagem = Tecnico.get_percentagem_tecnico(id_origem)
+
+        porcentagem_empresa = 100 - float(porcentagem)
+
+        participacao_taxa_empresa = "{:.2f}".format((float(taxa) * porcentagem_empresa) / 100)
+        print(porcentagem)
+        print(participacao_taxa_empresa)
+
+        type = "d"
+        category = "financeiro"
+        especie = f'Taxa - {especie_method}'
+
+        Financeiro.post_transaction_credito_tecnico(date=date, type=type, amount=participacao_taxa_empresa, category=category, description=description, especie=especie, destinatario="", user=user, origem=origem, id_origem=id_origem)
+    '''
+        
+    return redirect(url_for('transacao_pendente'))
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5039)
+    app.run(debug=True, port=5038)
