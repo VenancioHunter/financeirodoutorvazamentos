@@ -102,19 +102,19 @@
               <th>Número OS</th>
               <!--<th>ID</th>-->
               <th>Data OS</th>
-              <th>D. Pagamento</th>
-              <th>Cidade</th>
-              <th>Atendente</th>
-              <th>Serviço</th>
+              <!--<th>D. Pagamento</th>-->
+              <!--<th>Cidade</th>-->
+              <!--<th>Atendente</th>-->
+              <!--<th>Serviço</th>-->
               <th>Orçamento</th>
-              <th>Cliente</th>
-              <th>Telefone</th>
+              <!--<th>Cliente</th>-->
+              <!--<th>Telefone</th>-->
               <th>Técnico</th>
               <th>Método Pagamento</th>
-              <th>Valor Líquido</th>
               <th>Taxa Transação</th>
               <th>Outros Custos</th>
               <th>Observação</th>
+              <th>Valor Líquido</th>
               <th>Valor Técnico</th>
               <th>Valor Empreza</th>
             </tr>
@@ -141,21 +141,30 @@
               <td>{{ p.numero_os }}</td>
               <!--<td>{{ p.id_os }}</td>-->
               <td>{{ p.date_os }}</td>
-              <td>{{ p.date_payment }}</td>
-              <td>{{ p.city_os }}</td>
-              <td>{{ p.atendente }}</td>
-              <td>{{ p.service }}</td>
+              <!--<td>{{ p.date_payment }}</td>-->
+              <!--<td>{{ p.city_os }}</td>-->
+              <!--<td>{{ p.atendente }}</td>-->
+              <!--<td>{{ p.service }}</td>-->
               <td>{{ p.orcamento }}</td>
-              <td>{{ p.client }}</td>
-              <td>{{ p.client_phone }}</td>
+              <!--<td>{{ p.client }}</td>-->
+              <!--<td>{{ p.client_phone }}</td>-->
               <td>{{ p.tecnico }}</td>
               <td>{{ p.metodo_pagamento }}</td>
-              <td>{{ p.valor_liquido }}</td>
               <td>{{ p.taxa }}</td>
               <td>{{ p.outros_custos_service }}</td>
               <td>{{ p.observacoes_service }}</td>
+              <td>{{ p.valor_liquido }}</td>
               <td>{{ p.valor_tecnico }}</td>
               <td>{{ p.valor_empresa }}</td>
+              <td>
+                <button
+                  class="btn btn-danger btn-delete"
+                  data-id-transaction="{{ id }}"
+                  data-date-payment="{{ p.date_payment }}"
+                >
+                  Cancelar
+                </button>
+              </td>
             </tr>
             {% endfor %}
           </tbody>
@@ -163,18 +172,51 @@
       </div>
     </div>
 
-    <!-- Lista de Selecionados -->
-    <div id="selecionados" class="mt-4 p-3 bg-light text-dark rounded">
-      <h4>Itens Selecionados</h4>
-      <ul id="lista-selecionados"></ul>
-      <h5>Total Empresa: R$ <span id="total-empresa">0.00</span></h5>
+    <div class="my-4 container">
+      <!-- Lista de Selecionados -->
+      <div id="selecionados" class="mt-4 p-3 bg-light text-dark rounded">
+        <div class="text-center">
+          <h4>OS's Selecionadas</h4>
+        </div>
+        <ul class="list-group list-group-flush" id="lista-selecionados"></ul>
+        <h5>Total Empresa: R$ <span id="total-empresa">0.00</span></h5>
+      </div>
+
+      <div>
+        <button id="btnSalvar" class="btn btn-success mt-3" style="width: 100%">
+          Salvar Selecionados
+        </button>
+      </div>
     </div>
 
-    <div>
-      <button id="btnSalvar" class="btn btn-success mt-3">
-        Salvar Selecionados
-      </button>
+    <!-- Overlay para bloquear a tela de fundo -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Pop-up -->
+    <div class="popup" id="popup" align="center">
+      <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <div>
+        <span>Salvando...</span>
+      </div>
     </div>
+
+    <script>
+      function mostrarPopup() {
+        var overlay = document.getElementById("overlay");
+        var popup = document.getElementById("popup");
+
+        overlay.style.display = "block";
+        popup.style.display = "block";
+
+        // Bloqueia a interação com a tela de fundo
+        overlay.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+      }
+    </script>
 
     <script>
       const checkboxes = document.querySelectorAll(".select-item");
@@ -228,10 +270,16 @@
 
             // adiciona item na lista
             const li = document.createElement("li");
-            li.textContent = `OS: ${item.numero_os} | Cliente: ${
-              item.cliente
-            } | Cidade: ${item.cidade} | Valor Empresa: R$ ${valor.toFixed(2)}`;
+            li.innerHTML = `
+          <strong>OS:</strong> ${item.numero_os}<br>
+          <strong>Cliente:</strong> ${item.cliente}<br>
+          <strong>Cidade:</strong> ${item.cidade}<br>
+          <strong>Valor Empresa:</strong> R$ ${valor.toFixed(2)}
+`;
             li.setAttribute("data-id", item.id);
+
+            li.classList.add("list-group-item");
+
             lista.appendChild(li);
 
             total += valor;
@@ -260,6 +308,7 @@
       document
         .getElementById("btnSalvar")
         .addEventListener("click", function () {
+          mostrarPopup();
           fetch("/post_transacao_pendente", {
             method: "POST",
             headers: {
@@ -272,13 +321,53 @@
           })
             .then((response) => response.json())
             .then((data) => {
-              alert("Itens salvos com sucesso!");
-              console.log(data);
+              console.log("Success:", data);
             })
             .catch((error) => {
               console.error("Erro:", error);
+            })
+            .finally(() => {
+              window.location.reload();
             });
         });
+    </script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const deleteButtons = document.querySelectorAll(".btn-delete");
+
+        deleteButtons.forEach((btn) => {
+          btn.addEventListener("click", function () {
+            const id = this.getAttribute("data-id-transaction");
+            const datePayment = this.getAttribute("data-date-payment");
+
+            if (confirm("Deseja realmente deletar esta transação?")) {
+              fetch("/cancel_transaction_pendding", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  id: id,
+                  date_payment: datePayment,
+                }),
+              })
+                .then((response) => response.json())
+                .then((data) => {
+                  if (data.success) {
+                    alert("Transação deletada com sucesso!");
+                    window.location.reload(); // Atualiza tabela
+                  } else {
+                    alert("Erro ao deletar: " + data.message);
+                  }
+                })
+                .catch((error) => {
+                  console.error("Erro:", error);
+                });
+            }
+          });
+        });
+      });
     </script>
 
     <script

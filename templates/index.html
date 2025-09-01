@@ -46,14 +46,18 @@ content %}
           href="{{ url_for('transacao_pendente') }}"
           style="text-decoration: none"
         >
-          <h5>Pendentes</h5>
+          <h5>Os's a Receber</h5>
         </a>
       </div>
     </div>
-    <div class="col-sm-12" hidden>
+    <div class="col-sm-12">
       <div class="border border-0 m-2">
-        <a class="card-presentation" href="">
-          <h5>Pagamento Pendente</h5>
+        <a
+          class="card-presentation"
+          href="{{ url_for('transacoes_confirmadas') }}"
+          style="text-decoration: none"
+        >
+          <h5>OS's Recebidas</h5>
         </a>
       </div>
     </div>

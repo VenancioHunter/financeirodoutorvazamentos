@@ -453,26 +453,87 @@ def post_transacao_pendente():
         db.child("financeiro").child("transactions_confirmadas").child(year).child(month).child(day).push(get_service_pedente)
         db.child("financeiro").child("transactions_pendentes").child(year).child(month).child(day).child(item['id_transaction']).remove()
 
-
-    '''
-    if taxa != "0.00":
-
-        porcentagem = Tecnico.get_percentagem_tecnico(id_origem)
-
-        porcentagem_empresa = 100 - float(porcentagem)
-
-        participacao_taxa_empresa = "{:.2f}".format((float(taxa) * porcentagem_empresa) / 100)
-        print(porcentagem)
-        print(participacao_taxa_empresa)
-
-        type = "d"
-        category = "financeiro"
-        especie = f'Taxa - {especie_method}'
-
-        Financeiro.post_transaction_credito_tecnico(date=date, type=type, amount=participacao_taxa_empresa, category=category, description=description, especie=especie, destinatario="", user=user, origem=origem, id_origem=id_origem)
-    '''
         
-    return redirect(url_for('transacao_pendente'))
+    return True
+
+
+@app.route('/transacoes_confirmadas', methods=['GET', 'POST'])
+@check_roles(['admin'])
+def transacoes_confirmadas():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    
+    pendentes = {}
+    data = db.child("financeiro").child("transactions_confirmadas").get().val() or {}
+
+    for ano, meses in data.items():
+        for mes, dias in meses.items():
+            for dia, transacoes in dias.items():
+                for pendente_id, pendente in transacoes.items():
+                    pendentes[pendente_id] = {
+                        **pendente,
+                        "ano": ano,
+                        "mes": mes,
+                        "dia": dia,
+                        "id": pendente_id
+                    }
+    return render_template('transacoes_confirmadas.html', pendentes=pendentes)
+
+
+@app.route("/cancel_transaction_pendding", methods=["POST"])
+def cancel_transaction_pendding():
+    data = request.get_json()
+    transaction_id = data.get("id")
+    date_payment = data.get("date_payment")
+
+    try:
+        date = datetime.strptime(date_payment, '%Y-%m-%d')
+    except ValueError:
+            return "Formato de data inválido."
+            
+    year = str(date.year)
+    month = f"{date.month:02d}"
+    day = f"{date.day:02d}"
+
+    data = db.child("financeiro").child("transactions_pendentes").child(year).child(month).child(day).child(transaction_id).get().val()
+
+    id_os = data.get("id_os")
+    city_os = data.get("city_os")
+    date_os = data.get("date_os")
+    tecnico_id = data.get("tecnico_id")
+    id_create_transaction_user = data.get("id_create_transaction_user")
+    id_create_transaction_wallet = data.get("id_create_transaction_wallet")
+
+
+    try:
+        date = datetime.strptime(date_os, '%Y-%m-%d')
+    except ValueError:
+            return "Formato de data inválido."
+            
+    year_os = str(date.year)
+    month_os = f"{date.month:02d}"
+    day_os = f"{date.day:02d}"
+
+
+
+    try:
+
+        db.child("ordens_servico").child(city_os).child(year_os).child(month_os).child(day_os).child(id_os).child('status_paymment').remove()
+
+        db.child("users").child(tecnico_id).child('wallet').child('cities').child(city_os).child(year).child(month).child(day).child('transactions').child('success').child(id_create_transaction_user).remove()
+
+        db.child("wallet").child(city_os).child(year).child(month).child(day).child('transactions').child('success').child(id_create_transaction_wallet).remove()
+
+        db.child("financeiro").child("transactions_pendentes").child(year).child(month).child(day).child(transaction_id).remove()
+
+        print(f"ID da transação a ser deletada: {transaction_id}")
+        print(f"Data de pagamento associada: {date_payment}")
+        print(city_os)
+
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5038)
