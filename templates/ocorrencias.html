@@ -1,0 +1,342 @@
+{% extends "layout.html" %} {% block title %}Ocorrências{% endblock %} {% block
+content %}
+<script src="../static/js/formatarValor.js"></script>
+<div class="container mt-4">
+  <h2 class="mb-3">Ocorrências</h2>
+
+  <!-- BOTÃO NOVA OCORRÊNCIA -->
+  <button
+    type="button"
+    class="btn btn-primary mb-3"
+    data-bs-toggle="modal"
+    data-bs-target="#modalNovaOcorrencia"
+  >
+    ➕ Nova Ocorrência
+  </button>
+
+  <!-- TABELA -->
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Data</th>
+        <th>Técnico</th>
+        <th>OS</th>
+        <th>Descrição</th>
+        <th>Valor</th>
+        <th>Ação</th>
+        <th>Resultado</th>
+        <th>Situação</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for o in ocorrencias %}
+      <tr>
+        <td>{{ o.numero }}</td>
+        <td>
+          {{ o.data.split('-')[2] }}/{{ o.data.split('-')[1] }}/{{
+          o.data.split('-')[0] }}
+        </td>
+        <td>{{ o.tecnico }}</td>
+        <td>{{ o.os }}</td>
+        <td>{{ o.descricao }}</td>
+        <td>R$ {{ o.valor }}</td>
+        <td>{{ o.acao }}</td>
+        <td>{{ o.resultado }}</td>
+        <td>
+          <span
+            class="badge {{ 'bg-warning' if o.situacao == 'Pendente' else 'bg-success' }}"
+          >
+            {{ o.situacao }}
+          </span>
+        </td>
+        <td>
+          <!-- EDITAR -->
+          <button
+            type="button"
+            class="btn btn-sm btn-warning"
+            data-bs-toggle="modal"
+            data-bs-target="#modalEditarOcorrencia"
+            data-id="{{ o.id }}"
+            data-data="{{ o.data }}"
+            data-tecnico="{{ o.tecnico }}"
+            data-os="{{ o.os }}"
+            data-descricao="{{ o.descricao }}"
+            data-valor="{{ o.valor }}"
+            data-acao="{{ o.acao }}"
+            data-resultado="{{ o.resultado }}"
+            data-situacao="{{ o.situacao }}"
+          >
+            ✏️
+          </button>
+
+          <!-- DELETAR -->
+          <button
+            type="button"
+            class="btn btn-sm btn-danger"
+            data-bs-toggle="modal"
+            data-bs-target="#modalDeletarOcorrencia"
+            data-id="{{ o.id }}"
+          >
+            🗑️
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- ================= MODAL NOVA OCORRÊNCIA ================= -->
+<div
+  class="modal fade"
+  id="modalNovaOcorrencia"
+  tabindex="-1"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <form method="post" action="/criar_ocorrencia" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Nova Ocorrência</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+
+      <div class="modal-body">
+        <input
+          type="date"
+          id="novaDataOcorrencia"
+          name="data"
+          class="form-control mb-2"
+          required
+        />
+        <input
+          type="text"
+          name="tecnico"
+          class="form-control mb-2"
+          placeholder="Técnico"
+          list="listaTecnicos"
+          required
+        />
+
+        <datalist id="listaTecnicos">
+          {% for uid, t in tecnicos.items() %}
+          <option value="{{ t.name }}"></option>
+          {% endfor %}
+        </datalist>
+        <input
+          type="text"
+          name="os"
+          class="form-control mb-2"
+          placeholder="OS"
+        />
+        <textarea
+          name="descricao"
+          class="form-control mb-2"
+          placeholder="Descrição"
+          required
+        ></textarea>
+        <input
+          id="ocValor"
+          type="tel"
+          name="valor"
+          class="form-control mb-2"
+          placeholder="Valor"
+        />
+        <input
+          type="text"
+          name="acao"
+          class="form-control mb-2"
+          placeholder="Ação"
+        />
+        <select name="situacao" class="form-control mb-2">
+          <option value="Pendente">Pendente</option>
+          <option value="Resolvido">Resolvido</option>
+        </select>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancelar
+        </button>
+        <button class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL EDITAR OCORRÊNCIA ================= -->
+<div
+  class="modal fade"
+  id="modalEditarOcorrencia"
+  tabindex="-1"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <form method="post" action="/editar_ocorrencia" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Editar Ocorrência</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" name="ocorrencia_id" id="editId" />
+
+        <input
+          type="date"
+          name="data"
+          id="editData"
+          class="form-control mb-2"
+          required
+        />
+        <input
+          type="text"
+          name="tecnico"
+          id="editTecnico"
+          class="form-control mb-2"
+          required
+        />
+        <input type="text" name="os" id="editOs" class="form-control mb-2" />
+        <textarea
+          name="descricao"
+          id="editDescricao"
+          class="form-control mb-2"
+          placeholder="Descrição"
+          required
+        ></textarea>
+        <input
+          type="tel"
+          name="valor"
+          id="editValor"
+          class="form-control mb-2"
+          placeholder="Valor"
+        />
+
+        <input
+          type="text"
+          name="acao"
+          id="editAcao"
+          class="form-control mb-2"
+          placeholder="Ação"
+        />
+        <input
+          type="text"
+          name="resultado"
+          id="editResultado"
+          class="form-control mb-2"
+          placeholder="Resultado"
+        />
+        <select name="situacao" id="editSituacao" class="form-control mb-2">
+          <option value="Pendente">Pendente</option>
+          <option value="Resolvido">Resolvido</option>
+        </select>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancelar
+        </button>
+        <button class="btn btn-primary">Salvar Alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL DELETAR OCORRÊNCIA ================= -->
+<div
+  class="modal fade"
+  id="modalDeletarOcorrencia"
+  tabindex="-1"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <form method="post" action="/deletar_ocorrencia" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger">Excluir Ocorrência</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+
+      <div class="modal-body">
+        <p class="mb-0">
+          ⚠️ Tem certeza que deseja <strong>excluir esta ocorrência</strong>?
+          <br />Essa ação <strong>não poderá ser desfeita</strong>.
+        </p>
+        <input type="hidden" name="ocorrencia_id" id="deleteOcorrenciaId" />
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-danger">Excluir</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= JS (BOOTSTRAP 5 PURO) ================= -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const modalEditar = document.getElementById("modalEditarOcorrencia");
+
+    modalEditar.addEventListener("show.bs.modal", function (event) {
+      const button = event.relatedTarget;
+
+      document.getElementById("editId").value = button.dataset.id;
+      document.getElementById("editData").value = button.dataset.data;
+      document.getElementById("editTecnico").value = button.dataset.tecnico;
+      document.getElementById("editOs").value = button.dataset.os;
+      document.getElementById("editDescricao").value = button.dataset.descricao;
+      document.getElementById("editValor").value = button.dataset.valor;
+      document.getElementById("editAcao").value = button.dataset.acao;
+      document.getElementById("editResultado").value = button.dataset.resultado;
+      document.getElementById("editSituacao").value = button.dataset.situacao;
+    });
+
+    /* DELETAR */
+    const modalDeletar = document.getElementById("modalDeletarOcorrencia");
+    modalDeletar.addEventListener("show.bs.modal", function (event) {
+      const button = event.relatedTarget;
+      document.getElementById("deleteOcorrenciaId").value = button.dataset.id;
+    });
+  });
+</script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const modalNova = document.getElementById("modalNovaOcorrencia");
+    const inputData = document.getElementById("novaDataOcorrencia");
+
+    modalNova.addEventListener("show.bs.modal", function () {
+      if (!inputData.value) {
+        const hoje = new Date();
+        const ano = hoje.getFullYear();
+        const mes = String(hoje.getMonth() + 1).padStart(2, "0");
+        const dia = String(hoje.getDate()).padStart(2, "0");
+
+        inputData.value = `${ano}-${mes}-${dia}`;
+      }
+    });
+  });
+</script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    configurarFormatacaoValor("ocValor");
+    configurarFormatacaoValor("editValor");
+  });
+</script>
+
+{% endblock %}

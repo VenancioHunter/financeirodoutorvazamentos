@@ -64,6 +64,7 @@
     <table class="table table-striped">
         <thead>
             <tr>
+                <th>Nº Lançamento</th>
                 <th>Usuário</th>
                 <th>Data</th>
                 <th>Origem</th>
@@ -73,6 +74,7 @@
                 <th>Descrição</th>
                 <th>Tipo</th>
                 <th>Valor (R$)</th>
+                <th>Obs.</th>
                 <th></th>
                 <th></th>
             </tr>
@@ -81,6 +83,7 @@
             {% for day, day_data in transactions.items() %}
             {% for transaction_id, transaction in day_data.transactions.items() %}
             <tr>
+                <td>{{ transaction.numero_transaction }}</td>
                 <td>{{ transaction.user }}</td>
                 <td>{{ day }}/{{ mes }}/{{ ano }}</td>
                 <td><a href="/profile_user/{{transaction.id_origem}}">{{ transaction.origem }}</a></td>
@@ -102,15 +105,34 @@
                     <span class="text-danger">-{{ transaction.amount }}</span>
                     {% endif %}
                 </td>
-                <td>
-                    <!-- Botão para editar o lançamento -->
-                    <button class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editLancamentoModal"
+                <!--<td>
+                     Botão para editar o lançamento -->
+                    <!--<button class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editLancamentoModal"
                         data-id="{{ transaction_id }}" data-date="{{ day }}/{{ mes }}/{{ ano }}"
                         data-category="{{ transaction.category }}" data-especie="{{ transaction.especie }}"
                         data-destinatario="{{ transaction.destinatario }}" data-description="{{ transaction.description }}"
                         data-type="{{ transaction.type }}" data-amount="{{ transaction.amount }}">
                         Editar
                     </button>
+                </td>-->
+                
+                <td
+                    style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                    title="{{ transaction.observacao }}"
+                    data-toggle="tooltip"
+                    >
+                    {{ transaction.observacao or '-' }}
+                </td>
+                <td align="center">
+                <button
+                    class="btn btn-sm btn-outline-info"
+                    data-id="{{ transaction_id }}"
+                    data-date="{{ ano }}-{{ '%02d' % mes }}-{{ day }}"
+                    data-observacao="{{ transaction.observacao }}"
+                    onclick="abrirObservacao(this)"
+                >
+                    📝
+                </button>
                 </td>
                 <td>
                     <!-- Botão para editar o lançamento -->
@@ -118,6 +140,7 @@
                         Deletar
                     </button>
                 </td>
+                
             </tr>
             {% endfor %}
             <tr>
@@ -138,6 +161,32 @@
             {% endfor %}
         </tbody>
     </table>
+</div>
+
+<!-- Modal para Obs -->
+<div class="modal fade" id="observacaoModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5>Observação do Lançamento</h5>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="obsTransactionId">
+        <input type="hidden" id="obsDate">
+
+        <textarea
+          class="form-control"
+          id="obsTexto"
+          rows="5"
+          placeholder="Digite a observação..."
+        ></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarObservacao()">Salvar ou Editar</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Modal para gerar lançamento -->
@@ -164,13 +213,23 @@
                     <div class="my-4">
                         <label for="origem" style="font-size: small;">Origem</label>
                         <select class="form-select" name="origem" required>
-                            {% for id in destinatarios %}
+                            {% if destinatarios %}
+                                {% for id in destinatarios %}
                                 {% if destinatarios[id] == 'Central Vazamentos' %}
-                                    <option value="{{destinatarios[id]}}" selected>{{destinatarios[id]}}</option>
+                                    <option value="{{ destinatarios[id] }}" selected>
+                                    {{ destinatarios[id] }}
+                                    </option>
                                 {% else %}
-                                    <option value="{{destinatarios[id]}}">{{destinatarios[id]}}</option>
+                                    <option value="{{ destinatarios[id] }}">
+                                    {{ destinatarios[id] }}
+                                    </option>
                                 {% endif %}
-                            {% endfor %}
+                                {% endfor %}
+                            {% else %}
+                                <option value="" disabled selected>
+                                Nenhum destinatário cadastrado
+                                </option>
+                            {% endif %}
                         </select>
                     </div>
                     <div class="row">
@@ -201,16 +260,24 @@
                     </select>
                     <div class="my-4">
                         <label for="destinatario" style="font-size: small;">Destinatário</label>
-                        <select class="form-select" name="destinatario">
-                            <option selected value="">Selecionar</option>
+                        <select class="form-select" name="destinatario" required>
+                        {% if destinatarios %}
+                            <option value="" selected disabled>Selecionar</option>
                             {% for id in destinatarios %}
-                            <option value="{{destinatarios[id]}}">{{destinatarios[id]}}</option>
+                            <option value="{{ destinatarios[id] }}">
+                                {{ destinatarios[id] }}
+                            </option>
                             {% endfor %}
+                        {% else %}
+                            <option value="" selected disabled>
+                            Nenhum destinatário cadastrado
+                            </option>
+                        {% endif %}
                         </select>
                     </div>
                     <div class="row my-2">
                         <div class="col">
-                            <Label style="font-size: small;">Observação</Label>
+                            <Label style="font-size: small;">Descrição</Label>
                             <textarea class="form-control" type="text" name="descricao"></textarea>
                         </div>
                     </div>
@@ -326,11 +393,26 @@
 
                     <div class="my-4">
                         <label for="editDestinatario" style="font-size: small;">Destinatário</label>
-                        <select class="form-select" name="editDestinatario" id="editDestinatario" required>
+                        <select
+                        class="form-select"
+                        name="editDestinatario"
+                        id="editDestinatario"
+                        required
+                        >
+                        {% if destinatarios %}
+                            <option value="" disabled selected>Selecionar destinatário</option>
                             {% for id in destinatarios %}
-                            <option value="{{destinatarios[id]}}">{{destinatarios[id]}}</option>
+                            <option value="{{ destinatarios[id] }}">
+                                {{ destinatarios[id] }}
+                            </option>
                             {% endfor %}
+                        {% else %}
+                            <option value="" disabled selected>
+                            Nenhum destinatário cadastrado
+                            </option>
+                        {% endif %}
                         </select>
+
                     </div>
 
                     <div class="row my-2">
@@ -558,4 +640,37 @@
 </script>
 
 
+<script>
+$(function () {
+  $('[data-toggle="tooltip"]').tooltip();
+});
+</script>
+<script>
+    function abrirObservacao(btn) {
+  const id = btn.dataset.id;
+  const date = btn.dataset.date;
+  const texto = btn.dataset.observacao || "";
+
+  document.getElementById("obsTransactionId").value = id;
+  document.getElementById("obsTexto").value = texto;
+  document.getElementById("obsDate").value = date;
+
+  $('#observacaoModal').modal('show');
+}
+
+function salvarObservacao() {
+  const transaction_id = document.getElementById("obsTransactionId").value;
+  const observacao = document.getElementById("obsTexto").value;
+  const date = document.getElementById("obsDate").value;
+    console.log(date);
+  fetch("/salvar_observacao", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ transaction_id, observacao, date })
+  })
+  .then(r => r.json())
+  .then(() => location.reload());
+}
+
+</script>
 {% endblock %}

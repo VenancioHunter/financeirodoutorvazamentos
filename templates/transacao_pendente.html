@@ -101,8 +101,8 @@
               <th>Selecionar</th>
               <th>Número OS</th>
               <!--<th>ID</th>-->
-              <th>Data OS</th>
-              <!--<th>D. Pagamento</th>-->
+              <th>Data Serviço</th>
+              <th>Data Fecahemento</th>
               <!--<th>Cidade</th>-->
               <!--<th>Atendente</th>-->
               <!--<th>Serviço</th>-->
@@ -140,8 +140,8 @@
               </td>
               <td>{{ p.numero_os }}</td>
               <!--<td>{{ p.id_os }}</td>-->
-              <td>{{ p.date_os }}</td>
-              <!--<td>{{ p.date_payment }}</td>-->
+              <td class="data-os" data-date="{{ p.date_os }}"></td>
+              <td>{{ p.horario_fechamento }}</td>
               <!--<td>{{ p.city_os }}</td>-->
               <!--<td>{{ p.atendente }}</td>-->
               <!--<td>{{ p.service }}</td>-->
@@ -162,7 +162,7 @@
                   data-id-transaction="{{ id }}"
                   data-date-payment="{{ p.date_payment }}"
                 >
-                  Cancelar
+                  Devolver
                 </button>
               </td>
             </tr>
@@ -201,7 +201,13 @@
         <span>Salvando...</span>
       </div>
     </div>
-
+    <script>
+      document.querySelectorAll(".data-os").forEach((el) => {
+        const dataStr = el.dataset.date.split(" ")[0]; // pega só a parte da data
+        const [ano, mes, dia] = dataStr.split("-");
+        el.textContent = `${dia}/${mes}/${ano}`;
+      });
+    </script>
     <script>
       function mostrarPopup() {
         var overlay = document.getElementById("overlay");
@@ -246,7 +252,7 @@
             tecnico_nome: this.dataset.nomeTecnico, // disponível para verificação
           };
 
-          if (this.checked) {
+          /*if (this.checked) {
             // Se for a primeira seleção, define os "actives"
             if (!activeTecnicoId && !activeDateOsPayment) {
               activeTecnicoId = item.tecnico_id;
@@ -262,6 +268,20 @@
                 alert(
                   "Só é possível selecionar OS do mesmo técnico e da mesma data."
                 );
+                return;
+              }
+            }*/
+
+          if (this.checked) {
+            // Se for a primeira seleção, define os "actives"
+            if (!activeTecnicoId) {
+              activeTecnicoId = item.tecnico_id;
+            } else {
+              // Se já existe uma seleção ativa, valida se bate com a atual
+              if (item.tecnico_id !== activeTecnicoId) {
+                // Não permite selecionar; desmarca e avisa (ou apenas desmarca se preferir sem alerta)
+                this.checked = false;
+                alert("Só é possível selecionar OS do mesmo técnico");
                 return;
               }
             }

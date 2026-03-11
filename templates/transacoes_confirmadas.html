@@ -139,12 +139,59 @@
               <td>{{ p.valor_liquido }}</td>
               <td>{{ p.valor_tecnico }}</td>
               <td>{{ p.valor_empresa }}</td>
+              <td>
+                <button
+                  class="btn btn-danger btn-delete"
+                  data-id-transaction="{{ id }}"
+                  data-date-payment="{{ p.date_payment }}"
+                >
+                  Devolver
+                </button>
+              </td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
     </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const deleteButtons = document.querySelectorAll(".btn-delete");
+
+        deleteButtons.forEach((btn) => {
+          btn.addEventListener("click", function () {
+            const id = this.getAttribute("data-id-transaction");
+            const datePayment = this.getAttribute("data-date-payment");
+
+            if (confirm("Deseja realmente deletar esta transação?")) {
+              fetch("/cancel_transaction_confirmadas", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  id: id,
+                  date_payment: datePayment,
+                }),
+              })
+                .then((response) => response.json())
+                .then((data) => {
+                  if (data.success) {
+                    alert("Transação deletada com sucesso!");
+                    window.location.reload(); // Atualiza tabela
+                  } else {
+                    alert("Erro ao deletar: " + data.message);
+                  }
+                })
+                .catch((error) => {
+                  console.error("Erro:", error);
+                });
+            }
+          });
+        });
+      });
+    </script>
 
     <script
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
